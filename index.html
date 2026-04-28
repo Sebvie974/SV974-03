@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Blu-ray Thèque Perso</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        #suggestions { z-index: 1000 !important; max-height: 350px; overflow-y: auto; background: #1f2937; border: 1px solid #4b5563; }
+        .suggestion-item:hover { background-color: #374151; cursor: pointer; }
+        .badge-3d { background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%); color: white; }
+        .editing-mode { border: 2px solid #3b82f6 !important; background-color: #1e3a8a !important; }
+        .col-format { min-width: 140px; white-space: nowrap; }
+        #movie-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: #1f2937; max-width: 800px; width: 100%; border-radius: 1rem; overflow: hidden; border: 1px solid #374151; }
+        .movie-row { cursor: zoom-in; }
+        /* Style pour les étoiles cliquables dans la modale */
+        .star-clickable { cursor: pointer; transition: transform 0.1s; }
+        .star-clickable:hover { transform: scale(1.2); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-6 gap-4">
+            <h1 class="text-3xl font-bold text-blue-400 uppercase tracking-tighter"><i class="fas fa-compact-disc mr-2"></i>Ma Collection</h1>
+            
+            <div class="flex items-center gap-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
+                <button onclick="exportCollection()" class="bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded text-xs font-bold transition"><i class="fas fa-save mr-1"></i> SAUVEGARDER</button>
+                <button onclick="document.getElementById('importFile').click()" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded text-xs font-bold transition"><i class="fas fa-file-import mr-1"></i> OUVRIR</button>
+                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importCollection(event)">
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <select id="sort-select" onchange="displayMovies()" class="bg-gray-800 border border-gray-600 rounded-full px-4 py-2 text-sm text-gray-300 outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="alpha" selected>Ordre A-Z</option>
+                    <option value="newest">Plus récents</option>
+                    <option value="oldest">Plus anciens</option>
+                    <option value="rating">Mieux notés</option>
+                </select>
+                <input type="text" id="search-bar" placeholder="Filtrer..." class="px-4 py-2 bg-gray-800 border border-gray-600 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <span id="movie-count" class="bg-blue-600 px-4 py-2 rounded-full text-sm font-bold shadow-lg">0 Films</span>
+            </div>
+        </header>
+
+        <section id="form-container" class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-8 border border-gray-700 transition-all duration-300">
+            <h2 id="form-title" class="text-blue-400 text-xs uppercase font-black mb-4 tracking-widest">Ajouter un nouveau film</h2>
+            <form id="movie-form" class="grid grid-cols-1 md:grid-cols-7 gap-4">
+                <input type="hidden" id="edit-id" value="">
+                <div class="md:col-span-3 relative">
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Titre du film</label>
+                    <input type="text" id="title-input" autocomplete="off" required placeholder="Ex: Avatar..." class="w-full bg-gray-700 border-none rounded-lg p-3 text-white outline-none focus:ring-2 focus:ring-blue-500">
+                    <div id="loading-indicator" class="hidden absolute right-3 top-10 text-blue-400"><i class="fas fa-spinner fa-spin"></i></div>
+                    <div id="suggestions" class="absolute left-0 right-0 mt-1 rounded-lg shadow-2xl hidden"></div>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Format</label>
+                    <select id="format" class="w-full bg-gray-700 border-none rounded-lg p-3 outline-none cursor-pointer">
+                        <option value="Blu-ray">Blu-ray</option>
+                        <option value="Blu-ray 4K">Blu-ray 4K</option>
+                        <option value="Blu-ray 3D">Blu-ray 3D</option>
+                        <option value="Steelbook">Steelbook</option>
+                        <option value="Coffret">Coffret</option>
+                    </select>
+                </div>
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Note</label>
+                    <input type="number" id="rating" min="0" max="5" step="0.5" value="5" class="w-full bg-gray-700 border-none rounded-lg p-3 outline-none">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold transition"><i class="fas fa-plus"></i></button>
+                    <button type="button" id="cancel-edit" class="hidden bg-gray-600 hover:bg-gray-500 p-3 rounded-lg font-bold"><i class="fas fa-times"></i></button>
+                </div>
+            </form>
+        </section>
+
+        <div class="bg-gray-800 rounded-xl overflow-x-auto shadow-xl border border-gray-700">
+            <table class="w-full text-left min-w-[600px]">
+                <tbody id="movie-list" class="divide-y divide-gray-700"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="movie-modal" onclick="closeModal()">
+        <div class="modal-content flex flex-col md:flex-row" onclick="event.stopPropagation()">
+            <img id="modal-img" src="" class="w-full md:w-1/3 object-cover bg-gray-700" alt="Poster">
+            <div class="p-8 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="modal-title" class="text-3xl font-bold text-blue-400"></h2>
+                        <button onclick="closeModal()" class="text-gray-500 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    <div id="modal-format-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase mb-4"></div>
+                    <p id="modal-desc" class="text-gray-300 leading-relaxed mb-6"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-400 font-bold uppercase text-xs">Ma Note :</span>
+                    <div id="modal-stars" class="text-yellow-500 text-xl flex gap-1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TMDB_API_KEY = '925dee449263006777b7ccc02e9b92c3';
+        let currentSelection = null;
+        let currentModalMovieId = null;
+
+        const titleInput = document.getElementById('title-input');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const movieForm = document.getElementById('movie-form');
+        const movieList = document.getElementById('movie-list');
+        const formContainer = document.getElementById('form-container');
+        const formTitle = document.getElementById('form-title');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-edit');
+        const sortSelect = document.getElementById('sort-select');
+
+        function exportCollection() {
+            const movies = localStorage.getItem('movies');
+            if (!movies || movies === '[]') { alert("Votre collection est vide !"); return; }
+            const blob = new Blob([movies], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'ma_collection.json'; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importCollection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedMovies = JSON.parse(e.target.result);
+                    if (Array.isArray(importedMovies)) {
+                        if(confirm("Importer cette liste ?")) {
+                            localStorage.setItem('movies', JSON.stringify(importedMovies));
+                            displayMovies();
+                        }
+                    }
+                } catch (err) { alert("Fichier non valide !"); }
+            };
+            reader.readAsText(file);
+        }
+
+        let timeout = null;
+        titleInput.addEventListener('input', () => {
+            clearTimeout(timeout);
+            const query = titleInput.value.trim();
+            if (query.length < 2) { suggestionsDiv.classList.add('hidden'); return; }
+            timeout = setTimeout(async () => {
+                document.getElementById('loading-indicator').classList.remove('hidden');
+                try {
+                    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=fr-FR`);
+                    const data = await res.json();
+                    if (data.results && data.results.length > 0) {
+                        suggestionsDiv.innerHTML = '';
+                        data.results.slice(0, 5).forEach(movie => {
+                            const div = document.createElement('div');
+                            div.className = "suggestion-item flex items-center gap-3 p-3 border-b border-gray-700 last:border-0";
+                            div.innerHTML = `<img src="${movie.poster_path ? 'https://image.tmdb.org/t/p/w92'+movie.poster_path : 'https://via.placeholder.com/40x60'}" class="w-10 rounded"><div><div class="font-bold text-sm text-white">${movie.title}</div><div class="text-xs text-gray-400">${movie.release_date ? movie.release_date.split('-')[0] : ''}</div></div>`;
+                            div.onmousedown = () => {
+                                titleInput.value = movie.title;
+                                currentSelection = { overview: movie.overview, poster: movie.poster_path ? 'https://image.tmdb.org/t/p/w500'+movie.poster_path : null };
+                                suggestionsDiv.classList.add('hidden');
+                            };
+                            suggestionsDiv.appendChild(div);
+                        });
+                        suggestionsDiv.classList.remove('hidden');
+                    }
+                } catch (err) { console.error(err); }
+                document.getElementById('loading-indicator').classList.add('hidden');
+            }, 500);
+        });
+
+        movieForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+            if (id) {
+                movies = movies.map(m => m.id == id ? { ...m, title: titleInput.value, format: document.getElementById('format').value, rating: parseFloat(document.getElementById('rating').value), overview: currentSelection ? currentSelection.overview : m.overview, poster: currentSelection ? currentSelection.poster : m.poster } : m);
+                exitEditMode();
+            } else {
+                movies.push({ id: Date.now(), title: titleInput.value, format: document.getElementById('format').value, rating: parseFloat(document.getElementById('rating').value), overview: currentSelection ? currentSelection.overview : "Aucun résumé.", poster: currentSelection ? currentSelection.poster : null });
+            }
+            localStorage.setItem('movies', JSON.stringify(movies));
+            currentSelection = null; movieForm.reset(); displayMovies();
+        });
+
+        // OUVERTURE DE LA FICHE
+        window.openDetails = function(id) {
+            const movies = JSON.parse(localStorage.getItem('movies') || '[]');
+            const movie = movies.find(m => m.id == id);
+            if(!movie) return;
+            
+            currentModalMovieId = id; // On stocke l'ID pour savoir quel film on note
+
+            document.getElementById('modal-img').src = movie.poster || 'https://via.placeholder.com/300x450?text=Pas+d+image';
+            document.getElementById('modal-title').innerText = movie.title;
+            document.getElementById('modal-desc').innerText = movie.overview;
+            const badge = document.getElementById('modal-format-badge');
+            badge.innerText = movie.format;
+            badge.className = `inline-block px-3 py-1 rounded-full text-xs font-bold uppercase mb-4 ${getFormatClass(movie.format)}`;
+            
+            renderModalStars(movie.rating);
+            document.getElementById('movie-modal').style.display = 'flex';
+        }
+
+        // DESSINER LES ÉTOILES DANS LA MODALE
+        function renderModalStars(rating) {
+            let starsHtml = '';
+            for(let i=1; i<=5; i++) {
+                const isFull = i <= rating;
+                starsHtml += `<i class="${isFull ? 'fas' : 'far'} fa-star star-clickable" onclick="updateRatingFromModal(${i})"></i>`;
+            }
+            document.getElementById('modal-stars').innerHTML = starsHtml;
+        }
+
+        // METTRE À JOUR LA NOTE DEPUIS LA MODALE
+        window.updateRatingFromModal = function(newRating) {
+            let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+            movies = movies.map(m => {
+                if (m.id === currentModalMovieId) {
+                    return { ...m, rating: newRating };
+                }
+                return m;
+            });
+            localStorage.setItem('movies', JSON.stringify(movies));
+            renderModalStars(newRating); // Mise à jour visuelle immédiate dans la modale
+        }
+
+        window.closeModal = function() { 
+            document.getElementById('movie-modal').style.display = 'none';
+            displayMovies(); // Rafraîchir la liste principale pour voir la nouvelle note
+        }
+
+        window.editMovie = function(id) {
+            const movies = JSON.parse(localStorage.getItem('movies') || '[]');
+            const m = movies.find(movie => movie.id == id);
+            document.getElementById('edit-id').value = m.id;
+            titleInput.value = m.title;
+            document.getElementById('format').value = m.format;
+            document.getElementById('rating').value = m.rating;
+            formContainer.classList.add('editing-mode');
+            submitBtn.innerHTML = '<i class="fas fa-save"></i>';
+            cancelBtn.classList.remove('hidden');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        };
+
+        function exitEditMode() {
+            formContainer.classList.remove('editing-mode');
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i>';
+            cancelBtn.classList.add('hidden');
+            document.getElementById('edit-id').value = "";
+            movieForm.reset();
+        }
+
+        function displayMovies() {
+            const movies = JSON.parse(localStorage.getItem('movies') || '[]');
+            const filter = document.getElementById('search-bar').value.toLowerCase();
+            const sortBy = sortSelect.value;
+            
+            movieList.innerHTML = '';
+            
+            let filtered = movies.filter(m => m.title.toLowerCase().includes(filter));
+
+            if (sortBy === 'alpha') filtered.sort((a, b) => a.title.localeCompare(b.title));
+            else if (sortBy === 'newest') filtered.sort((a, b) => b.id - a.id);
+            else if (sortBy === 'oldest') filtered.sort((a, b) => a.id - b.id);
+            else if (sortBy === 'rating') filtered.sort((a, b) => b.rating - a.rating);
+
+            filtered.forEach(movie => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-750 transition duration-150 movie-row";
+                row.onclick = () => openDetails(movie.id);
+                row.innerHTML = `<td class="px-6 py-4 flex items-center gap-4"><img src="${movie.poster || 'https://via.placeholder.com/40x60'}" class="w-12 rounded shadow"><div class="max-w-md"><div class="font-bold text-blue-100">${movie.title}</div><div class="text-gray-400 text-xs italic line-clamp-2">${movie.overview}</div></div></td><td class="px-6 py-4 text-center col-format"><span class="px-4 py-1.5 rounded-full text-[11px] font-bold uppercase shadow-sm ${getFormatClass(movie.format)}">${movie.format}</span></td><td class="px-6 py-4 text-right"><div class="flex justify-end gap-3" onclick="event.stopPropagation()"><button onclick="editMovie(${movie.id})" class="text-gray-500 hover:text-blue-400 px-2"><i class="fas fa-edit"></i></button><button onclick="deleteMovie(${movie.id})" class="text-gray-500 hover:text-red-500 px-2"><i class="fas fa-trash-alt"></i></button></div></td>`;
+                movieList.appendChild(row);
+            });
+            document.getElementById('movie-count').innerText = `${filtered.length} Film${filtered.length > 1 ? 's' : ''}`;
+        }
+
+        function getFormatClass(format) {
+            switch(format) {
+                case 'Blu-ray 4K': return 'bg-purple-600 text-white';
+                case 'Blu-ray 3D': return 'badge-3d';
+                case 'Steelbook': return 'bg-amber-500 text-black';
+                default: return 'bg-blue-600 text-white';
+            }
+        }
+
+        window.deleteMovie = function(id) {
+            if(confirm('Supprimer ce film ?')) {
+                let movies = JSON.parse(localStorage.getItem('movies') || '[]');
+                movies = movies.filter(m => m.id != id);
+                localStorage.setItem('movies', JSON.stringify(movies));
+                displayMovies();
+            }
+        };
+
+        document.getElementById('search-bar').addEventListener('input', displayMovies);
+        displayMovies();
+    </script>
+</body>
+</html>
