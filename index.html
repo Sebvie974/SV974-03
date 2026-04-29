@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ma Blu-ray Thèque</title>
 
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CinéLib">
@@ -22,7 +23,7 @@
         .badge-4k { background-color: #7c3aed; color: white; }
         .editing-mode { border: 2px solid #3b82f6 !important; background-color: #1e3a8a !important; }
         
-        /* FIX POUR LE BLOCAGE DES FILTRES */
+        /* HEADER FIGÉ */
         .sticky-header {
             position: sticky;
             top: 0;
@@ -93,7 +94,7 @@
                         <div id="suggestions" class="absolute left-0 right-0 mt-1 rounded-lg shadow-2xl hidden"></div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Format de l'édition</label>
+                        <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Format</label>
                         <select id="format" class="w-full bg-gray-700 border-none rounded-lg p-2.5 outline-none">
                             <option value="Blu-Ray">Blu-Ray</option>
                             <option value="Blu-ray 4K">Blu-ray 4K</option>
@@ -112,29 +113,28 @@
 
                 <div class="flex items-center gap-3 bg-gray-900/50 p-4 rounded-lg border border-gray-700 mb-6 w-fit">
                     <input type="checkbox" id="nas-status" class="w-5 h-5 rounded border-gray-600 bg-gray-700 text-emerald-500">
-                    <label for="nas-status" class="text-xs font-bold text-emerald-400 uppercase cursor-pointer"><i class="fas fa-server mr-2"></i>Copié sur le NAS</label>
+                    <label for="nas-status" class="text-xs font-bold text-emerald-400 uppercase cursor-pointer"><i class="fas fa-server mr-2"></i>NAS</label>
                 </div>
 
                 <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-700 mb-6">
-                    <label class="block text-[10px] font-bold text-blue-400 mb-3 uppercase tracking-widest">Audio & Supports</label>
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
                         <select id="temp-support" class="bg-gray-800 rounded p-2 text-xs text-emerald-400 border border-gray-600 outline-none">
                             <option value="2D">2D</option><option value="4K">4K</option><option value="3D">3D</option>
                         </select>
-                        <select id="temp-lang" class="bg-gray-700 rounded p-2 text-xs text-white outline-none">
+                        <select id="temp-lang" class="bg-gray-700 rounded p-2 text-xs text-white">
                             <option value="FR">FR</option><option value="EN">EN</option><option value="JP">JP</option>
                         </select>
-                        <select id="temp-format" class="bg-gray-700 rounded p-2 text-xs text-white outline-none">
+                        <select id="temp-format" class="bg-gray-700 rounded p-2 text-xs text-white">
                             <option value="Dolby Atmos">Dolby Atmos</option><option value="DTS-HD MA">DTS-HD MA</option>
                             <option value="DTS:X">DTS:X</option><option value="Dolby TrueHD">Dolby TrueHD</option>
                         </select>
-                        <input type="text" id="temp-channels" placeholder="5.1" class="bg-gray-700 rounded p-2 text-xs text-white outline-none">
+                        <input type="text" id="temp-channels" placeholder="5.1" class="bg-gray-700 rounded p-2 text-xs text-white">
                         <button type="button" onclick="addAudioTrack()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] rounded uppercase">Ajouter</button>
                     </div>
                     <div id="audio-tracks-preview" class="flex flex-wrap gap-2"></div>
                 </div>
 
-                <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold uppercase shadow-lg">Enregistrer</button>
+                <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold uppercase">Enregistrer</button>
             </form>
         </section>
 
@@ -159,22 +159,25 @@
                         <div id="modal-nas-badge" class="hidden px-3 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold uppercase">NAS</div>
                     </div>
                     <div id="modal-audio-sections" class="space-y-4"></div>
-                    <p id="modal-desc" class="text-gray-400 text-sm italic mt-6 leading-relaxed"></p>
+                    <p id="modal-desc" class="text-gray-400 text-sm italic mt-6"></p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // PWA SERVICE WORKER REGISTRATION
+        // --- OPTIMISATION PWA (SERVICE WORKER DIRECT) ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const blob = new Blob([`
+                const swCode = `
+                    const CACHE_NAME = 'bluray-cache-v1';
                     self.addEventListener('install', (e) => self.skipWaiting());
-                    self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request)));
-                `], { type: 'application/javascript' });
-                const workerUrl = URL.createObjectURL(blob);
-                navigator.serviceWorker.register(workerUrl);
+                    self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(blob))
+                    .then(() => console.log("PWA Active"))
+                    .catch(err => console.error("PWA Error", err));
             });
         }
 
@@ -321,7 +324,7 @@
         }
 
         function deleteMovie(id) {
-            if(confirm('Supprimer ce film ?')) {
+            if(confirm('Supprimer ?')) {
                 const movies = getMovies().filter(m => m.id != id);
                 localStorage.setItem('movies', JSON.stringify(movies));
                 displayMovies();
@@ -356,7 +359,6 @@
 
         function closeModal() { document.getElementById('movie-modal').style.display = 'none'; }
 
-        // TMDB
         document.getElementById('title-input').addEventListener('input', function() {
             const q = this.value;
             if(q.length < 2) { document.getElementById('suggestions').classList.add('hidden'); return; }

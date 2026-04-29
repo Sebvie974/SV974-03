@@ -1,14 +1,13 @@
 {
   "name": "Ma Blu-ray Thèque",
-  "short_name": "CinéCollection",
-  "description": "Gestionnaire de collection Blu-ray et 4K",
-  "start_url": "index.html",
+  "short_name": "CinéLib",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#111827",
-  "theme_color": "#2563eb",
+  "theme_color": "#111827",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3061/3061033.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/3507/3507102.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
