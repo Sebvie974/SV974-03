@@ -68,14 +68,15 @@
                             <option value="Steelbook">Steelbook</option>
                         </select>
                         <select id="filter-audio" onchange="displayMovies()" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-blue-400 outline-none">
-                            <option value="">Audio</option>
-			    <option value="Dolby Digital">Dolby Digital</option>
-			    <option value="DTS">DTS</option>
-                            <option value="Dolby Atmos">Dolby Atmos</option>
-                            <option value="DTS-HD MA">DTS-HD MA</option>
-                            <option value="DTS:X">DTS:X</option>
-                            <option value="Dolby TrueHD">Dolby TrueHD</option>
-                        </select>
+    <option value="">Audio</option>
+    <option value="Dolby Digital">Dolby Digital</option>
+    <option value="DTS">DTS</option>
+    <option value="Dolby TrueHD">Dolby TrueHD</option>
+    <option value="Dolby Atmos">Dolby Atmos</option>
+    <option value="DTS-HD">DTS-HD</option>
+    <option value="DTS-HD MA">DTS-HD MA</option>
+    <option value="DTS:X">DTS:X</option>
+</select>
                         <select id="filter-nas" onchange="displayMovies()" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-emerald-400 font-bold outline-none">
                             <option value="">État NAS</option>
                             <option value="true">Sur le NAS</option>
@@ -128,9 +129,14 @@
                             <option value="FR">FR</option><option value="EN">EN</option><option value="JP">JP</option>
                         </select>
                         <select id="temp-format" class="bg-gray-700 rounded p-2 text-xs text-white">
-                            <option value="Dolby Atmos">Dolby Atmos</option><option value="DTS-HD MA">DTS-HD MA</option>
-                            <option value="DTS:X">DTS:X</option><option value="Dolby TrueHD">Dolby TrueHD</option>
-                        </select>
+    <option value="Dolby Digital">Dolby Digital</option>
+    <option value="DTS">DTS</option>
+    <option value="Dolby TrueHD">Dolby TrueHD</option>
+    <option value="Dolby Atmos">Dolby Atmos</option>
+    <option value="DTS-HD">DTS-HD</option>
+    <option value="DTS-HD MA">DTS-HD MA</option>
+    <option value="DTS:X">DTS:X</option>
+</select>
                         <input type="text" id="temp-channels" placeholder="5.1" class="bg-gray-700 rounded p-2 text-xs text-white">
                         <button type="button" onclick="addAudioTrack()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] rounded uppercase">Ajouter</button>
                     </div>
